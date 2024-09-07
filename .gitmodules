@@ -1,3 +1,6 @@
 [submodule "CPP_FSRS"]
 	path = CPP_FSRS
 	url = https://github.com/squee72564/CPP_FSRS.git
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/ocornut/imgui.git
