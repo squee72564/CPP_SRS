@@ -6,6 +6,8 @@
 #endif
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
+#include <sqlite3.h>
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -13,6 +15,7 @@
 #include "models.hpp"
 #include "imguiHelpers.hpp"
 #include "FlashCard.hpp"
+#include "db.hpp"
 
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
 // To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
@@ -77,13 +80,32 @@ int main(int, char**)
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+
+    // Initialize Database
+    sqlite3 *db;
+    char *errMsg;
+    int rc;
+
+    if (!openDB(&db, "./database/myDB", rc)) {
+	return 1;
+    }
+
+    if (!createDBTables(db, &errMsg, rc)) {
+	closeDB(db);
+	return 1;
+    }
     
     // Our state
-    FSRS f = FSRS();
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     bool reveal_card = false;
+    bool create_card = false;
     
+    FSRS f = FSRS();
     FlashCard *flash_card = nullptr;
+    Card card = Card();
+
+    char answer_string[255] = {0};
+    char question_string[255] = {0};
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -112,10 +134,11 @@ int main(int, char**)
 	    ImGui::Begin("FSRS"); 
 
 	    if (ImGui::Button("Pull Card") && !flash_card) {
-		flash_card = allocFlashCard(Card(), "This is testings answer", "This is testing quiz");
+		flash_card = allocFlashCard(card, "This is testings answer", "This is testing quiz");
 	    }
 
-	    if (ImGui::Button("Create Card")) {
+	    if (ImGui::Button("Create Card") && !create_card) {
+		create_card = true;		
 	    }
 
 	    ImGui::End();
@@ -126,12 +149,48 @@ int main(int, char**)
 
 	    FlashCardStatus status = drawFlashCard(*flash_card, reveal_card);
 
+	    Rating flash_card_rating = Rating::Again;
+
+	    switch (status) {
+		case FlashCardStatus::HARD :
+		    flash_card_rating = Rating::Hard;
+		    break;
+		case FlashCardStatus::GOOD :
+		    flash_card_rating = Rating::Good;
+		    break;
+		case FlashCardStatus::EASY :
+		    flash_card_rating = Rating::Easy;
+		    break;
+		default:
+		    break;
+	    }
+
+	    // Resechedule the card based on the rating
 	    if (status != FlashCardStatus::NONE) {
+		const auto& [new_card, review_log] = f.reviewCard(flash_card->card, flash_card_rating); 
+		card = new_card;
+
 		freeFlashCard(flash_card);
 		flash_card = nullptr;
 		reveal_card = false;
 	    }
         }
+
+	if (create_card) {
+	    ImGui::Begin("Create new card");
+	    
+	    ImGui::InputText("Question", question_string, IM_ARRAYSIZE(question_string));
+	    ImGui::InputText("Answer", answer_string, IM_ARRAYSIZE(answer_string));
+
+	    if (ImGui::Button("Create card")) {
+		create_card = false;
+		memset(question_string, 0, IM_ARRAYSIZE(question_string));
+		memset(answer_string, 0, IM_ARRAYSIZE(answer_string));
+	    }
+
+	    ImGui::End();
+
+	}
 
         // Rendering
         ImGui::Render();
@@ -157,6 +216,8 @@ int main(int, char**)
 
     glfwDestroyWindow(window);
     glfwTerminate();
+
+    closeDB(db);
 
     return 0;
 }
