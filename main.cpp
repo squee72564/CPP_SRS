@@ -1,6 +1,3 @@
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
 #include <string>
 #include <stdio.h>
 #define GL_SILENCE_DEPRECATION
@@ -9,9 +6,13 @@
 #endif
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 #include "FSRS.hpp"
 #include "models.hpp"
 #include "imguiHelpers.hpp"
+#include "FlashCard.hpp"
 
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
 // To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
@@ -78,8 +79,11 @@ int main(int, char**)
     ImGui_ImplOpenGL3_Init(glsl_version);
     
     // Our state
+    FSRS f = FSRS();
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     bool reveal_card = false;
+    
+    FlashCard *flash_card = nullptr;
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -103,14 +107,30 @@ int main(int, char**)
 
 	float windowHeight = 200.0f;
 	float windowWidth = 400.0f;
-        
-        {
+
+	{
+	    ImGui::Begin("FSRS"); 
+
+	    if (ImGui::Button("Pull Card") && !flash_card) {
+		flash_card = allocFlashCard(Card(), "This is testings answer", "This is testing quiz");
+	    }
+
+	    if (ImGui::Button("Create Card")) {
+	    }
+
+	    ImGui::End();
+	}
+
+        if (flash_card) {
 	    ImGui::SetNextWindowSize(ImVec2(windowWidth, windowHeight), 8);
 
-	    const std::string card_string =
-		    (reveal_card) ? "This is testings answer" : "This is testing quiz";
+	    FlashCardStatus status = drawFlashCard(*flash_card, reveal_card);
 
-	    drawFlashCard(card_string, reveal_card);
+	    if (status != FlashCardStatus::NONE) {
+		freeFlashCard(flash_card);
+		flash_card = nullptr;
+		reveal_card = false;
+	    }
         }
 
         // Rendering
