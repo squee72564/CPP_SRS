@@ -18,14 +18,14 @@ EXE = SRS_APP
 IMGUI_DIR = ./imgui
 CPP_FSRS_DIR = ./CPP_FSRS
 SOURCES = main.cpp
-SOURCES += $(CPP_FSRS_DIR)/src/models.cpp $(CPP_FSRS_DIR)/src/FSRS.cpp
+SOURCES += $(CPP_FSRS_DIR)/src/models.cpp $(CPP_FSRS_DIR)/src/FSRS.cpp ./src/imguiHelpers.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 OBJS = $(addsuffix .o, $(basename $(SOURCES)))
 UNAME_S := $(shell uname -s)
 LINUX_GL_LIBS = -lGL
 
-CXXFLAGS = -std=c++17 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(CPP_FSRS_DIR)/include
+CXXFLAGS = -std=c++17 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(CPP_FSRS_DIR)/include -I./include
 CXXFLAGS += -g -O3 -Wall -Wformat -Wpedantic
 LIBS =
 
@@ -73,6 +73,9 @@ endif
 ##---------------------------------------------------------------------
 
 %.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+./src%.o: ./src/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(CPP_FSRS_DIR)%.o: $(CPP_FSRS_DIR)/src/%.cpp
