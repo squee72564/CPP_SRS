@@ -13,6 +13,7 @@
 
 #include "FSRS.hpp"
 #include "models.hpp"
+#include "FlashCard.hpp"
 
 static void centerTextConditional(const ImVec2& window_size, const ImVec2& text_size) {
     if (window_size.x >= text_size.x) {
@@ -20,13 +21,14 @@ static void centerTextConditional(const ImVec2& window_size, const ImVec2& text_
     }
 }
 
-void drawFlashCard(const std::string& card_string, bool& reveal_card) {
+FlashCardStatus drawFlashCard(const FlashCard& card, bool& reveal_card) {
 
     ImGui::Begin("Flashcard");
 
     ImVec2 window_size = ImGui::GetWindowSize();
-    ImVec2 text_size = ImGui::CalcTextSize(card_string.c_str());
     std::string checkbox_text = (reveal_card) ? "Hide Card" : "Reveal card";
+    std::string card_string = (reveal_card) ? card.a : card.q;
+    ImVec2 text_size = ImGui::CalcTextSize(card_string.c_str());
 
     ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
@@ -37,16 +39,34 @@ void drawFlashCard(const std::string& card_string, bool& reveal_card) {
 
     ImGui::Checkbox(checkbox_text.c_str(), &reveal_card);
 
+    FlashCardStatus status = NONE;
+
     if (reveal_card) {
+        ImGui::SameLine(ImGui::GetItemRectSize().x + 20.0f);
+        if (ImGui::Button("Easy")) {
+	    status = FlashCardStatus::EASY;
+	}
+
         ImGui::SameLine();
-        ImGui::Button("Easy");
+
+        if (ImGui::Button("Good")) {
+	    status = FlashCardStatus::GOOD;
+	}
+
         ImGui::SameLine();
-        ImGui::Button("Good");
+
+        if (ImGui::Button("Hard")) {
+	    status = FlashCardStatus::HARD;
+	}
+
         ImGui::SameLine();
-        ImGui::Button("Hard");
-        ImGui::SameLine();
-        ImGui::Button("Relearn");
+
+        if (ImGui::Button("Again")) {
+	    status = FlashCardStatus::AGAIN;
+	}
     }
 
     ImGui::End();
+
+    return status;
 }
