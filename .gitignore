@@ -1,5 +1,5 @@
 # sqlite3 db
-./database/myDB
+database/myDB
 
 # imgui
 imgui.ini
@@ -36,3 +36,4 @@ imgui.ini
 *.exe
 *.out
 *.app
+SRS_APP
