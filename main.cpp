@@ -110,7 +110,6 @@ int main(int, char**)
         closeDB(db);
         return 1;
     }
-    std::cout << next_card_time << std::endl;
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -127,6 +126,14 @@ int main(int, char**)
             continue;
         }
 
+        // Get current time
+        std::time_t now_t = std::time(nullptr);
+        std::tm* now_tm = gmtime(&now_t);
+        
+        std::stringstream ss;
+        ss << std::put_time(now_tm, "%Y-%m-%dT%H:%M:%S");
+        std::string curr_time_str = ss.str();
+
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -135,13 +142,18 @@ int main(int, char**)
         { // This is the main window for the FSRS algorithm
             ImGui::Begin("FSRS"); 
 
+            ImGui::Text("Time Now: %s (GMT)", curr_time_str.c_str() );
+            ImGui::Text("Next Card Available At: %s (GMT)", (next_card_time == "") ? "None" : next_card_time.c_str() );
+
             if (ImGui::Button("Pull Card") && !flash_card) {
                 if (!pullCard(db, &flash_card)) {
                     break;		
                 }
             }
-
-            if (ImGui::Button("Create Card") && !create_card) {
+            
+            ImGui::SameLine();
+            
+            if (ImGui::Button("Create New Card") && !create_card) {
                 create_card = true;
             }
 
@@ -187,7 +199,6 @@ int main(int, char**)
                     break;
                 }
 
-                std::cout << next_card_time << std::endl;
             }
         }
 
@@ -197,7 +208,7 @@ int main(int, char**)
             ImGui::InputText("Question", question_string, IM_ARRAYSIZE(question_string));
             ImGui::InputText("Answer", answer_string, IM_ARRAYSIZE(answer_string));
 
-            if (ImGui::Button("Create card")) {
+            if (ImGui::Button("Submit")) {
                 if (!createCard(db, &errMsg, question_string, answer_string)) {
                     break;
                 }
@@ -210,7 +221,14 @@ int main(int, char**)
                     break;
                 }
 
-                std::cout << next_card_time << std::endl;
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Cancel")) {
+                create_card = false;
+                memset(question_string, 0, IM_ARRAYSIZE(question_string));
+                memset(answer_string, 0, IM_ARRAYSIZE(answer_string));
             }
 
             ImGui::End();
