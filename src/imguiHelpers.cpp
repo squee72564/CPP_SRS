@@ -33,7 +33,7 @@ FlashCardStatus drawFlashCard(const FlashCard& card, bool& reveal_card) {
     ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
     centerTextConditional(window_size, text_size);
-    ImGui::TextWrapped(card_string.c_str());
+    ImGui::TextWrapped("%s", card_string.c_str());
 
     ImGui::Dummy(ImVec2(0.0f, window_size.y - 100.0f - text_size.y));
 
