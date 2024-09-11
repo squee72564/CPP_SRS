@@ -106,8 +106,6 @@ bool pullCard(sqlite3 *db, FlashCard **flash_card) {
         Card card = Card::fromMap(card_map);
 
         *flash_card = allocFlashCard(uuid, card, answer_string, question_string);
-    } else {
-        std::cout << "There is no valid card to pull at this time" << std::endl;
     }
 
     sqlite3_finalize(stmt);
