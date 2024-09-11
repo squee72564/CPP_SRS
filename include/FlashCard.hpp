@@ -13,12 +13,13 @@ enum FlashCardStatus {
 };
 
 struct FlashCard {
+    int uuid;
     Card card;
     std::string q;
     std::string a;
 };
 
-FlashCard * allocFlashCard(Card card, std::string a, std::string q);
+FlashCard * allocFlashCard(int uuid, Card card, std::string a, std::string q);
 void freeFlashCard(FlashCard *card);
 
 #endif
