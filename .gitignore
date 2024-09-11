@@ -1,3 +1,6 @@
+# sqlite3 db
+./database/myDB
+
 # imgui
 imgui.ini
 
