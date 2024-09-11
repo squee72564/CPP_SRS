@@ -86,12 +86,12 @@ int main(int, char**)
     char *errMsg;
 
     if (!openDB(&db, "./database/myDB")) {
-	return 1;
+        return 1;
     }
 
     if (!createDBTables(db, &errMsg)) {
-	closeDB(db);
-	return 1;
+        closeDB(db);
+        return 1;
     }
     
     // Our state
@@ -104,6 +104,13 @@ int main(int, char**)
 
     char answer_string[255] = {0};
     char question_string[255] = {0};
+    
+    std::string next_card_time = "";
+    if (!getNextCardTime(db, next_card_time)) {
+        closeDB(db);
+        return 1;
+    }
+    std::cout << next_card_time << std::endl;
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -125,79 +132,89 @@ int main(int, char**)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-	float windowHeight = 200.0f;
-	float windowWidth = 400.0f;
+        { // This is the main window for the FSRS algorithm
+            ImGui::Begin("FSRS"); 
 
-	{ // This is the main window for the FSRS algorithm
-	    ImGui::Begin("FSRS"); 
+            if (ImGui::Button("Pull Card") && !flash_card) {
+                if (!pullCard(db, &flash_card)) {
+                    break;		
+                }
+            }
 
-	    if (ImGui::Button("Pull Card") && !flash_card) {
-		if (!pullCard(db, &flash_card)) {
-		    break;		
-		}
-	    }
+            if (ImGui::Button("Create Card") && !create_card) {
+                create_card = true;
+            }
 
-	    if (ImGui::Button("Create Card") && !create_card) {
-		create_card = true;
-	    }
-
-	    ImGui::End();
-	}
-
-        if (flash_card) { // This is the window for the flash card if pulled
-	    ImGui::SetNextWindowSize(ImVec2(windowWidth, windowHeight), 8);
-
-	    FlashCardStatus status = drawFlashCard(*flash_card, reveal_card);
-
-	    Rating flash_card_rating = Rating::Again;
-
-	    switch (status) {
-		case FlashCardStatus::HARD :
-		    flash_card_rating = Rating::Hard;
-		    break;
-		case FlashCardStatus::GOOD :
-		    flash_card_rating = Rating::Good;
-		    break;
-		case FlashCardStatus::EASY :
-		    flash_card_rating = Rating::Easy;
-		    break;
-		default:
-		    break;
-	    }
-
-	    if (status != FlashCardStatus::NONE) {
-	        // Resechedule the card based on the rating
-		const auto& [new_card_metadata, review_log] = f.reviewCard(flash_card->card, flash_card_rating); 
-		
-		// Update the card in database
-		if (!updateCard(db, new_card_metadata, flash_card)) {
-		    break;
-		}
-
-		freeFlashCard(flash_card);
-		flash_card = nullptr;
-		reveal_card = false;
-	    }
+            ImGui::End();
         }
 
-	if (create_card) { // This is the window to create a new card
-	    ImGui::Begin("Create new card");
-	    
-	    ImGui::InputText("Question", question_string, IM_ARRAYSIZE(question_string));
-	    ImGui::InputText("Answer", answer_string, IM_ARRAYSIZE(answer_string));
+        if (flash_card) { // This is the window for the flash card if pulled
+            ImGui::SetNextWindowSize(ImVec2(400.0f, 200.0f), 8);
 
-	    if (ImGui::Button("Create card")) {
-		if (!createCard(db, &errMsg, question_string, answer_string)) {
-		    break;
-		}
-		create_card = false;
-		memset(question_string, 0, IM_ARRAYSIZE(question_string));
-		memset(answer_string, 0, IM_ARRAYSIZE(answer_string));
-	    }
+            FlashCardStatus status = drawFlashCard(*flash_card, reveal_card);
 
-	    ImGui::End();
+            Rating flash_card_rating = Rating::Again;
 
-	}
+            switch (status) {
+                case FlashCardStatus::HARD :
+                    flash_card_rating = Rating::Hard;
+                    break;
+                case FlashCardStatus::GOOD :
+                    flash_card_rating = Rating::Good;
+                    break;
+                case FlashCardStatus::EASY :
+                    flash_card_rating = Rating::Easy;
+                    break;
+                default:
+                    break;
+            }
+
+            if (status != FlashCardStatus::NONE) {
+                // Resechedule the card based on the rating
+                const auto& [new_card_metadata, review_log] = f.reviewCard(flash_card->card, flash_card_rating); 
+            
+                // Update the card in database
+                if (!updateCard(db, new_card_metadata, flash_card)) {
+                    break;
+                }
+
+                freeFlashCard(flash_card);
+                flash_card = nullptr;
+                reveal_card = false;
+
+                // Update next card time after rescheduling card
+                if (!getNextCardTime(db, next_card_time)) {
+                    break;
+                }
+
+                std::cout << next_card_time << std::endl;
+            }
+        }
+
+        if (create_card) { // This is the window to create a new card
+            ImGui::Begin("Create new card");
+            
+            ImGui::InputText("Question", question_string, IM_ARRAYSIZE(question_string));
+            ImGui::InputText("Answer", answer_string, IM_ARRAYSIZE(answer_string));
+
+            if (ImGui::Button("Create card")) {
+                if (!createCard(db, &errMsg, question_string, answer_string)) {
+                    break;
+                }
+                create_card = false;
+                memset(question_string, 0, IM_ARRAYSIZE(question_string));
+                memset(answer_string, 0, IM_ARRAYSIZE(answer_string));
+
+                // Update next card time after adding card
+                if (!getNextCardTime(db, next_card_time)) {
+                    break;
+                }
+
+                std::cout << next_card_time << std::endl;
+            }
+
+            ImGui::End();
+        }
 
         // Rendering
         ImGui::Render();
@@ -205,11 +222,11 @@ int main(int, char**)
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         glClearColor(
-	    clear_color.x * clear_color.w,
-	    clear_color.y * clear_color.w,
-	    clear_color.z * clear_color.w,
-	    clear_color.w
-	);
+            clear_color.x * clear_color.w,
+            clear_color.y * clear_color.w,
+            clear_color.z * clear_color.w,
+            clear_color.w
+        );
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
