@@ -44,26 +44,26 @@ FlashCardStatus drawFlashCard(const FlashCard& card, bool& reveal_card) {
     if (reveal_card) {
         ImGui::SameLine(ImGui::GetItemRectSize().x + 20.0f);
         if (ImGui::Button("Easy")) {
-	    status = FlashCardStatus::EASY;
-	}
+            status = FlashCardStatus::EASY;
+        }
 
         ImGui::SameLine();
 
         if (ImGui::Button("Good")) {
-	    status = FlashCardStatus::GOOD;
-	}
+            status = FlashCardStatus::GOOD;
+        }
 
         ImGui::SameLine();
 
         if (ImGui::Button("Hard")) {
-	    status = FlashCardStatus::HARD;
-	}
+            status = FlashCardStatus::HARD;
+        }
 
         ImGui::SameLine();
 
         if (ImGui::Button("Again")) {
-	    status = FlashCardStatus::AGAIN;
-	}
+            status = FlashCardStatus::AGAIN;
+        }
     }
 
     ImGui::End();
