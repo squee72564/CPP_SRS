@@ -84,13 +84,12 @@ int main(int, char**)
     // Initialize Database
     sqlite3 *db;
     char *errMsg;
-    int rc;
 
-    if (!openDB(&db, "./database/myDB", rc)) {
+    if (!openDB(&db, "./database/myDB")) {
 	return 1;
     }
 
-    if (!createDBTables(db, &errMsg, rc)) {
+    if (!createDBTables(db, &errMsg)) {
 	closeDB(db);
 	return 1;
     }
@@ -102,7 +101,6 @@ int main(int, char**)
     
     FSRS f = FSRS();
     FlashCard *flash_card = nullptr;
-    Card card = Card();
 
     char answer_string[255] = {0};
     char question_string[255] = {0};
@@ -130,21 +128,23 @@ int main(int, char**)
 	float windowHeight = 200.0f;
 	float windowWidth = 400.0f;
 
-	{
+	{ // This is the main window for the FSRS algorithm
 	    ImGui::Begin("FSRS"); 
 
 	    if (ImGui::Button("Pull Card") && !flash_card) {
-		flash_card = allocFlashCard(card, "This is testings answer", "This is testing quiz");
+		if (!pullCard(db, &flash_card)) {
+		    break;		
+		}
 	    }
 
 	    if (ImGui::Button("Create Card") && !create_card) {
-		create_card = true;		
+		create_card = true;
 	    }
 
 	    ImGui::End();
 	}
 
-        if (flash_card) {
+        if (flash_card) { // This is the window for the flash card if pulled
 	    ImGui::SetNextWindowSize(ImVec2(windowWidth, windowHeight), 8);
 
 	    FlashCardStatus status = drawFlashCard(*flash_card, reveal_card);
@@ -165,10 +165,14 @@ int main(int, char**)
 		    break;
 	    }
 
-	    // Resechedule the card based on the rating
 	    if (status != FlashCardStatus::NONE) {
-		const auto& [new_card, review_log] = f.reviewCard(flash_card->card, flash_card_rating); 
-		card = new_card;
+	        // Resechedule the card based on the rating
+		const auto& [new_card_metadata, review_log] = f.reviewCard(flash_card->card, flash_card_rating); 
+		
+		// Update the card in database
+		if (!updateCard(db, new_card_metadata, flash_card)) {
+		    break;
+		}
 
 		freeFlashCard(flash_card);
 		flash_card = nullptr;
@@ -176,13 +180,16 @@ int main(int, char**)
 	    }
         }
 
-	if (create_card) {
+	if (create_card) { // This is the window to create a new card
 	    ImGui::Begin("Create new card");
 	    
 	    ImGui::InputText("Question", question_string, IM_ARRAYSIZE(question_string));
 	    ImGui::InputText("Answer", answer_string, IM_ARRAYSIZE(answer_string));
 
 	    if (ImGui::Button("Create card")) {
+		if (!createCard(db, &errMsg, question_string, answer_string)) {
+		    break;
+		}
 		create_card = false;
 		memset(question_string, 0, IM_ARRAYSIZE(question_string));
 		memset(answer_string, 0, IM_ARRAYSIZE(answer_string));
